@@ -9,6 +9,7 @@ void vertex() {
 }
 
 void fragment() {
-	vec3 color = clamp((world.y - range.x) / (range.y - range.x), 0.0, 1.0) * bottomColor;
+	float h = clamp((world.y - range.x) / (range.y - range.x), 0.0, 1.0);
+	vec3 color = pow(h, 2) * bottomColor;
 	COLOR = vec4(color, 1.0);
 }
