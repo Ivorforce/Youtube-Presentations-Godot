@@ -1,0 +1,57 @@
+[gd_scene load_steps=10 format=3 uid="uid://be8pkw1al6m8r"]
+
+[ext_resource type="Shader" path="res://planet.gdshader" id="1_1p6fo"]
+[ext_resource type="Texture2D" uid="uid://cc4u7063b22e6" path="res://icon.svg" id="1_t8nq3"]
+[ext_resource type="Shader" path="res://sky.gdshader" id="3_uscxb"]
+[ext_resource type="Environment" uid="uid://ctprkvqrvelvt" path="res://environment.tres" id="4_dvf7v"]
+[ext_resource type="FontFile" uid="uid://ylh12mrsokru" path="res://Fonts/Font Awesome 6 Free-Solid-900.otf" id="5_p46bo"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_l4urs"]
+shader = ExtResource("3_uscxb")
+shader_parameter/range = Vector2(0, 1080)
+shader_parameter/bottomColor = Color(0.129412, 0.129412, 0.129412, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0o63y"]
+shader = ExtResource("1_1p6fo")
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_fb870"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_kl0pe"]
+font = ExtResource("5_p46bo")
+font_size = 40
+
+[node name="Node2D" type="Node2D"]
+
+[node name="0" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_l4urs")
+scale = Vector2(15, 8.4375)
+texture = ExtResource("1_t8nq3")
+centered = false
+
+[node name="Planet" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_0o63y")
+position = Vector2(962, 638)
+scale = Vector2(5.55862, 5.55862)
+texture = ExtResource("1_t8nq3")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("4_dvf7v")
+camera_attributes = SubResource("CameraAttributesPractical_fb870")
+
+[node name="PlanetBig" type="Sprite2D" parent="."]
+visible = false
+material = SubResource("ShaderMaterial_0o63y")
+position = Vector2(-4330, 1379)
+scale = Vector2(93.1252, 93.1252)
+texture = ExtResource("1_t8nq3")
+
+[node name="Person" type="Label" parent="."]
+offset_left = 947.0
+offset_top = 240.0
+offset_right = 972.0
+offset_bottom = 283.0
+text = ""
+label_settings = SubResource("LabelSettings_kl0pe")

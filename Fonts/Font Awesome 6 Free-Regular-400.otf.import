@@ -1,0 +1,38 @@
+[remap]
+
+importer="font_data_dynamic"
+type="FontFile"
+uid="uid://jm8l305nx4nx"
+path="res://.godot/imported/Font Awesome 6 Free-Regular-400.otf-3db1f47faf4364b9c31ca7c107cad700.fontdata"
+
+[deps]
+
+source_file="res://Fonts/Font Awesome 6 Free-Regular-400.otf"
+dest_files=["res://.godot/imported/Font Awesome 6 Free-Regular-400.otf-3db1f47faf4364b9c31ca7c107cad700.fontdata"]
+
+[params]
+
+Rendering=null
+antialiasing=1
+generate_mipmaps=false
+multichannel_signed_distance_field=true
+msdf_pixel_range=8
+msdf_size=48
+allow_system_fallback=true
+force_autohinter=false
+hinting=1
+subpixel_positioning=1
+oversampling=0.0
+Fallbacks=null
+fallbacks=[]
+Compress=null
+compress=true
+preload=[{
+"chars": [],
+"glyphs": [],
+"name": "New Configuration",
+"size": Vector2i(16, 0)
+}]
+language_support={}
+script_support={}
+opentype_features={}
