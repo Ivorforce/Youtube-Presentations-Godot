@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://8b6os7st6pes"
+path="res://.godot/imported/raytracer.glsl-7e14eecd61fe128bc37fd28f4e6d6e46.res"
+
+[deps]
+
+source_file="res://Shaders/raytracer/raytracer.glsl"
+dest_files=["res://.godot/imported/raytracer.glsl-7e14eecd61fe128bc37fd28f4e6d6e46.res"]
+
+[params]
+

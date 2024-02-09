@@ -1,0 +1,94 @@
+[gd_scene load_steps=7 format=3 uid="uid://d2kikjiu48m5e"]
+
+[sub_resource type="GDScript" id="GDScript_ebyah"]
+script/source = "extends CharacterBody2D
+
+@onready var line: Line2D = $\"../Line\"
+
+@export
+var random_collision_chance: float = 10.0
+@export
+var speed = 400.0
+
+var next_collision := 0.0
+
+func _ready():
+	next_collision = randf() * random_collision_chance
+
+func _physics_process(delta):
+	velocity = global_transform.basis_xform(Vector2.DOWN) * speed
+
+	var collision := move_and_collide(velocity * delta)
+	if collision:
+		rotate(90)
+		line.add_point(position)
+	
+	next_collision -= delta
+	if next_collision <= 0.0:
+		rotation = randf() * PI * 2
+		line.add_point(position)
+		next_collision = randf() * random_collision_chance
+
+	line.set_point_position(len(line.points) - 1, position)
+"
+
+[sub_resource type="Shader" id="Shader_8n8a7"]
+code = "shader_type canvas_item;
+
+float sdUnevenCapsule( vec2 p, float r1, float r2, float h )
+{
+    p.x = abs(p.x);
+    float b = (r1-r2)/h;
+    float a = sqrt(1.0-b*b);
+    float k = dot(p,vec2(-b,a));
+    if( k < 0.0 ) return length(p) - r1;
+    if( k > a*h ) return length(p-vec2(0.0,h)) - r2;
+    return dot(p, vec2(a,b) ) - r1;
+}
+
+void fragment() {
+	float d = 1.0 + (sdUnevenCapsule(UV - vec2(0.5, 0.32), 0.3, 0.05, 0.6)) * 4.0;
+	
+	if (d > 1.0) {
+		discard;
+	}
+
+	d = pow(d, 2);
+	
+	// Baller antialiasing
+	COLOR = vec4(vec3(1.0), min(4.0 - d * 4.0, d));
+	//COLOR = vec4(vec3(1.0), d);
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ybjd1"]
+shader = SubResource("Shader_8n8a7")
+
+[sub_resource type="Gradient" id="Gradient_6se6l"]
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_1u4u2"]
+gradient = SubResource("Gradient_6se6l")
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_nxxed"]
+radius = 1.0
+
+[node name="Ray" type="Node2D"]
+
+[node name="Line" type="Line2D" parent="."]
+points = PackedVector2Array(0, 0, 0, 0)
+width = 3.0
+
+[node name="Particle" type="CharacterBody2D" parent="."]
+rotation = 0.47822
+collision_layer = 2
+script = SubResource("GDScript_ebyah")
+
+[node name="Arrowhead" type="Sprite2D" parent="Particle"]
+visible = false
+material = SubResource("ShaderMaterial_ybjd1")
+scale = Vector2(0.0625, 16)
+texture = SubResource("GradientTexture1D_1u4u2")
+centered = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Particle"]
+shape = SubResource("CircleShape2D_nxxed")
