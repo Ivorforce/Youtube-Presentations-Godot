@@ -1,9 +1,11 @@
 extends Node2D
 
+var Fader = preload("res://Scripts/PostProcess/Fader.gd")
+
 var rd: RenderingDevice
 var shader_tracer: RID
 var shader_renderer: RID
-var shader_fader: RID
+var fader
 
 var output_texture: RID
 
@@ -17,7 +19,8 @@ func _ready():
 	rd = RenderingServer.get_rendering_device()
 	shader_tracer = rd.shader_create_from_spirv(load("res://Scripts/Raytracer/raytracer.glsl").get_spirv())
 	shader_renderer = rd.shader_create_from_spirv(load("res://Scripts/Raytracer/rayrenderer.glsl").get_spirv())
-	shader_fader = rd.shader_create_from_spirv(load("res://Scripts/Raytracer/fader.glsl").get_spirv())
+	fader = Fader.new()
+	fader.init(rd)
 	
 	var tex_format = RDTextureFormat.new()
 	tex_format.texture_type = RenderingDevice.TEXTURE_TYPE_2D
@@ -112,32 +115,7 @@ func trace(ray_count: int, seed: int, distance: float):
 	rd.free_rid(buffer_globals_renderer)
 	rd.free_rid(pipeline_renderer)
 
-func fade(delta):
-	var buffer_globals := rd.storage_buffer_create(4, PackedFloat32Array([0.1 ** delta]).to_byte_array())
-	var uniform_globals := RDUniform.new()
-	uniform_globals.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
-	uniform_globals.binding = 0
-	uniform_globals.add_id(buffer_globals)
-	var uniform_set_globals := rd.uniform_set_create([uniform_globals], shader_fader, 0)
-	
-	var uniform_texture := RDUniform.new()
-	uniform_texture.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
-	uniform_texture.binding = 0
-	uniform_texture.add_id(output_texture)
-	var uniform_set_texture := rd.uniform_set_create([uniform_texture], shader_fader, 1)
-	
-	var pipeline := rd.compute_pipeline_create(shader_fader)
-	var compute_list := rd.compute_list_begin()
-	rd.compute_list_bind_compute_pipeline(compute_list, pipeline)
-	rd.compute_list_bind_uniform_set(compute_list, uniform_set_globals, 0)
-	rd.compute_list_bind_uniform_set(compute_list, uniform_set_texture, 1)
-	rd.compute_list_dispatch(compute_list, 1920, 1080, 1)
-	rd.compute_list_end()
-
-	rd.free_rid(buffer_globals)
-	rd.free_rid(pipeline)
-
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _physics_process(delta):
-	fade(delta)
+	fader.fade(output_texture, 0.1 ** delta)
 	trace(1024, 3, Time.get_ticks_msec() / 1000.0 / 20.0)
