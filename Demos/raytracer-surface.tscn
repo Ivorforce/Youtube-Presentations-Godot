@@ -1,9 +1,9 @@
 [gd_scene load_steps=16 format=3 uid="uid://bxleni17317iw"]
 
-[ext_resource type="Shader" path="res://Shaders/sky.gdshader" id="1_cseh1"]
+[ext_resource type="Shader" path="res://Scripts/Objects/sky.gdshader" id="1_cseh1"]
 [ext_resource type="Environment" uid="uid://ctprkvqrvelvt" path="res://environment.tres" id="3_sigj7"]
-[ext_resource type="Shader" path="res://Shaders/surface.gdshader" id="4_ar74u"]
-[ext_resource type="Script" path="res://Scripts/Raytracer.gd" id="5_pqso6"]
+[ext_resource type="Shader" path="res://Scripts/Objects/surface.gdshader" id="4_ar74u"]
+[ext_resource type="Script" path="res://Scripts/Raytracer/Raytracer.gd" id="5_pqso6"]
 [ext_resource type="FontFile" uid="uid://ylh12mrsokru" path="res://Fonts/Font Awesome 6 Free-Solid-900.otf" id="6_ae0hi"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_8pvj0"]

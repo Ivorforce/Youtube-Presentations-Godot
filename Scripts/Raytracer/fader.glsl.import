@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://c7eh4apmc8ipu"
+path="res://.godot/imported/fader.glsl-a005282210951404852d1ee2ab0088d6.res"
+
+[deps]
+
+source_file="res://Scripts/Raytracer/fader.glsl"
+dest_files=["res://.godot/imported/fader.glsl-a005282210951404852d1ee2ab0088d6.res"]
+
+[params]
+

@@ -1,8 +1,8 @@
 [gd_scene load_steps=10 format=3 uid="uid://be8pkw1al6m8r"]
 
-[ext_resource type="Shader" path="res://Shaders/sky.gdshader" id="1_kvr0v"]
+[ext_resource type="Shader" path="res://Scripts/Objects/sky.gdshader" id="1_kvr0v"]
 [ext_resource type="Texture2D" uid="uid://cc4u7063b22e6" path="res://icon.svg" id="2_ixy2f"]
-[ext_resource type="Shader" path="res://Shaders/planet.gdshader" id="3_a3isg"]
+[ext_resource type="Shader" path="res://Scripts/Objects/planet.gdshader" id="3_a3isg"]
 [ext_resource type="Environment" uid="uid://ctprkvqrvelvt" path="res://environment.tres" id="4_0maj2"]
 [ext_resource type="FontFile" uid="uid://ylh12mrsokru" path="res://Fonts/Font Awesome 6 Free-Solid-900.otf" id="5_51rtq"]
 

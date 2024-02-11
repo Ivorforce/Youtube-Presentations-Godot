@@ -15,9 +15,9 @@ func _ready():
 	# local rendering device texture can't be rendered
 	#rd = RenderingServer.create_local_rendering_device()
 	rd = RenderingServer.get_rendering_device()
-	shader_tracer = rd.shader_create_from_spirv(load("res://Shaders/raytracer/raytracer.glsl").get_spirv())
-	shader_renderer = rd.shader_create_from_spirv(load("res://Shaders/raytracer/rayrenderer.glsl").get_spirv())
-	shader_fader = rd.shader_create_from_spirv(load("res://Shaders/raytracer/fader.glsl").get_spirv())
+	shader_tracer = rd.shader_create_from_spirv(load("res://Scripts/Raytracer/raytracer.glsl").get_spirv())
+	shader_renderer = rd.shader_create_from_spirv(load("res://Scripts/Raytracer/rayrenderer.glsl").get_spirv())
+	shader_fader = rd.shader_create_from_spirv(load("res://Scripts/Raytracer/fader.glsl").get_spirv())
 	
 	var tex_format = RDTextureFormat.new()
 	tex_format.texture_type = RenderingDevice.TEXTURE_TYPE_2D
