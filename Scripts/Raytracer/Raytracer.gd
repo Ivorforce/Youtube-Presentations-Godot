@@ -1,7 +1,5 @@
 extends Node2D
 
-var Fader = preload("res://Scripts/PostProcess/Fader.gd")
-
 var rd: RenderingDevice
 var shader_tracer: RID
 var shader_renderer: RID

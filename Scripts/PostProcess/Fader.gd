@@ -1,4 +1,4 @@
-extends Object
+class_name Fader extends Object
 
 var rd: RenderingDevice
 var shader_fader: RID
@@ -6,7 +6,7 @@ var shader_fader: RID
 func init(rd: RenderingDevice):
 	self.rd = rd
 	shader_fader = rd.shader_create_from_spirv(load("res://Scripts/PostProcess/fader.glsl").get_spirv())
-	
+
 func fade(texture: RID, amount: float):
 	var buffer_globals := rd.storage_buffer_create(4, PackedFloat32Array([amount]).to_byte_array())
 	var uniform_globals := RDUniform.new()
