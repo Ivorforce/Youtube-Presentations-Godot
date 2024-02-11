@@ -3,9 +3,11 @@ extends Node2D
 var rd: RenderingDevice
 var shader_tracer: RID
 var shader_renderer: RID
-var fader
+var fader: Fader
 
+var ray_count: int
 var output_texture: RID
+var uniform_set_paths: RID
 
 @onready
 var rays: Sprite2D = $"../Rays"
@@ -30,9 +32,12 @@ func _ready():
 
 	output_texture = rd.texture_create(tex_format, RDTextureView.new())
 	
-	trace(1024, 3, 0.0)
+	ray_count = 1024
+	trace(3)
+	render_at_position(0.0)
 
-func trace(ray_count: int, seed: int, distance: float):
+
+func trace(seed: int):
 	var buffer_globals := rd.storage_buffer_create(4, PackedInt32Array([seed]).to_byte_array())
 	var uniform_globals := RDUniform.new()
 	uniform_globals.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
@@ -45,7 +50,7 @@ func trace(ray_count: int, seed: int, distance: float):
 	uniform_paths.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
 	uniform_paths.binding = 0
 	uniform_paths.add_id(buffer_paths)
-	var uniform_set_paths := rd.uniform_set_create([uniform_paths], shader_tracer, 1)
+	uniform_set_paths = rd.uniform_set_create([uniform_paths], shader_tracer, 1)
 	
 	var pipeline := rd.compute_pipeline_create(shader_tracer)
 	var compute_list := rd.compute_list_begin()
@@ -64,8 +69,10 @@ func trace(ray_count: int, seed: int, distance: float):
 	#var output := output_bytes.to_float32_array()
 	#print("Output: ", output)
 
-	#################################################################
+	rd.free_rid(buffer_globals)
+	rd.free_rid(pipeline)
 
+func render_at_position(distance: float):
 	var buffer_globals_renderer := rd.storage_buffer_create(4, PackedFloat32Array([distance]).to_byte_array())
 	var uniform_globals_renderer := RDUniform.new()
 	uniform_globals_renderer.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
@@ -105,15 +112,11 @@ func trace(ray_count: int, seed: int, distance: float):
 	#var texture_g := rd_g.texture_create(tex_format, RDTextureView.new(), [byte_data])
 	#(rays.texture as Texture2DRD).texture_rd_rid = texture_g
 	(rays.texture as Texture2DRD).texture_rd_rid = output_texture
-	
-	rd.free_rid(buffer_globals)
-	rd.free_rid(buffer_paths)
-	rd.free_rid(pipeline)
-	
+
 	rd.free_rid(buffer_globals_renderer)
 	rd.free_rid(pipeline_renderer)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _physics_process(delta):
+func _process(delta):
 	fader.fade(output_texture, 0.1 ** delta)
-	trace(1024, 3, Time.get_ticks_msec() / 1000.0 / 20.0)
+	render_at_position(Time.get_ticks_msec() / 1000.0 / 20.0)
