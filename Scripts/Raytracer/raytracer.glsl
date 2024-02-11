@@ -6,14 +6,14 @@
 // Invocations in the (x, y, z) dimension
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-layout(set = 0, binding = 0, std430) restrict buffer Globals {
+layout(set = 0, binding = 0, std430) restrict readonly buffer Globals {
     uint seed;
     uint rayCount;
     uint bounceCount;
 }
 globals;
 
-layout(set = 1, binding = 0, std430) restrict buffer Paths {
+layout(set = 1, binding = 0, std430) restrict writeonly buffer Paths {
     float data[];
 }
 paths;
@@ -46,16 +46,16 @@ vec2 directionFromAngle(float rad) {
 
 void main() {
     uint bufIdx = gl_GlobalInvocationID.x * 3;
-    vec2 position = vec2(Random(gl_GlobalInvocationID.x ^ globals.seed) * 2500.0 - 100, 0.0);
+    vec2 position = vec2(Random(gl_GlobalInvocationID.x ^ globals.seed) * 5760.0 - 1000, 0.0);
     vec2 direction = directionFromAngle(-0.2);
     float lightness = 1.0;
 
     paths.data[bufIdx] = position.x;
     paths.data[bufIdx + 1] = position.y;
 
-    for (uint b = 1; b < globals.rayCount; b++) {
+    for (uint b = 1; b < globals.bounceCount; b++) {
         bufIdx += globals.rayCount * 3;
-        float distanceBeforeAtmosphereBounce = -log(1 - Random(gl_GlobalInvocationID.x ^ globals.seed ^ b)) / 0.001;
+        float distanceBeforeAtmosphereBounce = -log(1 - Random(gl_GlobalInvocationID.x ^ globals.seed ^ b)) / 0.0001;
         
         if (direction.y > 0.0) {
             float bottomPos = 970.0;

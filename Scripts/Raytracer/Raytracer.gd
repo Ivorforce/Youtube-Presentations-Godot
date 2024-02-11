@@ -17,6 +17,8 @@ var buffer_renderer_globals: RID
 var uniform_set_renderer_globals: RID
 var buffer_paths: RID
 var uniform_set_paths: RID
+var pipeline_tracer: RID
+var pipeline_renderer: RID
 var start_time: float = -1.0
 
 @onready
@@ -27,8 +29,13 @@ func _ready():
 	# local rendering device texture can't be rendered
 	#rd = RenderingServer.create_local_rendering_device()
 	rd = RenderingServer.get_rendering_device()
+	
 	shader_tracer = rd.shader_create_from_spirv(load("res://Scripts/Raytracer/raytracer.glsl").get_spirv())
+	pipeline_tracer = rd.compute_pipeline_create(shader_tracer)
+	
 	shader_renderer = rd.shader_create_from_spirv(load("res://Scripts/Raytracer/rayrenderer.glsl").get_spirv())
+	pipeline_renderer = rd.compute_pipeline_create(shader_renderer)
+	
 	fader = Fader.new()
 	fader.init(rd)
 	
@@ -51,7 +58,6 @@ func _ready():
 func setup_output_texture(width: int, height: int):
 	var tex_format = RDTextureFormat.new()
 	tex_format.texture_type = RenderingDevice.TEXTURE_TYPE_2D
-	tex_format.depth = 1
 	tex_format.width = width
 	tex_format.height = height
 	tex_format.format = RenderingDevice.DATA_FORMAT_R32G32B32A32_SFLOAT
@@ -70,7 +76,7 @@ func setup_output_texture(width: int, height: int):
 func trace(seed: int, ray_count: int, bounce_count: int):
 	rd.buffer_update(buffer_raytracer_globals, 0, 12, PackedInt32Array([seed, ray_count, bounce_count]).to_byte_array())
 	
-	if self.ray_count != ray_count || self.bounce_count != bounce_count:
+	if self.ray_count != ray_count or self.bounce_count != bounce_count:
 		self.ray_count = ray_count
 		self.bounce_count = bounce_count
 		
@@ -83,9 +89,8 @@ func trace(seed: int, ray_count: int, bounce_count: int):
 		uniform_paths.add_id(buffer_paths)
 		uniform_set_paths = rd.uniform_set_create([uniform_paths], shader_tracer, 1)
 	
-	var pipeline := rd.compute_pipeline_create(shader_tracer)
 	var compute_list := rd.compute_list_begin()
-	rd.compute_list_bind_compute_pipeline(compute_list, pipeline)
+	rd.compute_list_bind_compute_pipeline(compute_list, pipeline_tracer)
 	rd.compute_list_bind_uniform_set(compute_list, uniform_set_raytracer_globals, 0)
 	rd.compute_list_bind_uniform_set(compute_list, uniform_set_paths, 1)
 	rd.compute_list_dispatch(compute_list, ray_count, 1, 1)
@@ -100,14 +105,11 @@ func trace(seed: int, ray_count: int, bounce_count: int):
 	#var output := output_bytes.to_float32_array()
 	#print("Output: ", output)
 
-	rd.free_rid(pipeline)
-
 func render_at_position(distance: float):
 	var globals_array := PackedFloat32Array([distance]).to_byte_array()
 	globals_array.append_array(PackedInt32Array([ray_count, bounce_count]).to_byte_array())
 	rd.buffer_update(buffer_renderer_globals, 0, 12, globals_array)
-	
-	var pipeline_renderer := rd.compute_pipeline_create(shader_renderer)
+		
 	var compute_list_renderer := rd.compute_list_begin()
 	rd.compute_list_bind_compute_pipeline(compute_list_renderer, pipeline_renderer)
 	rd.compute_list_bind_uniform_set(compute_list_renderer, uniform_set_renderer_globals, 0)
@@ -133,14 +135,11 @@ func render_at_position(distance: float):
 	#var texture_g := rd_g.texture_create(tex_format, RDTextureView.new(), [byte_data])
 	#(rays.texture as Texture2DRD).texture_rd_rid = texture_g
 
-	rd.free_rid(pipeline_renderer)
-
-func _process(delta):
-	if Input.is_action_just_pressed("space"):
-		trace(randi(), 1024 * 2, 5)
-		start_time = Time.get_ticks_msec()
-
 func _physics_process(delta):
+	if Input.is_action_just_pressed("space"):
+		trace(randi(), 1024 * 1000 * 10, 5)
+		start_time = Time.get_ticks_msec()
+	
 	if start_time > 0.0:
-		fader.fade(output_texture, 0.1 ** delta)
-		render_at_position((Time.get_ticks_msec() - start_time) / 1000.0 * 200.0)
+		fader.fade(output_texture, 0.01 ** delta)
+		render_at_position((Time.get_ticks_msec() - start_time) / 1000.0 * 50.0)
