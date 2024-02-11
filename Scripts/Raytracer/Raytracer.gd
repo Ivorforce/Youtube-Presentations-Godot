@@ -17,6 +17,8 @@ var buffer_renderer_globals: RID
 var uniform_set_renderer_globals: RID
 var buffer_paths: RID
 var uniform_set_paths: RID
+var buffer_ray_attributes: RID
+var uniform_set_ray_attributes: RID
 var pipeline_tracer: RID
 var pipeline_renderer: RID
 var start_time: float = -1.0
@@ -42,18 +44,14 @@ func _ready():
 	setup_output_texture(1920, 1080)
 	
 	buffer_raytracer_globals = rd.storage_buffer_create(12)
-	var uniform_globals_raytracer := RDUniform.new()
-	uniform_globals_raytracer.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
-	uniform_globals_raytracer.binding = 0
-	uniform_globals_raytracer.add_id(buffer_raytracer_globals)
-	uniform_set_raytracer_globals = rd.uniform_set_create([uniform_globals_raytracer], shader_tracer, 0)
+	uniform_set_raytracer_globals = rd.uniform_set_create([
+		IvRd.make_storage_buffer_uniform(buffer_raytracer_globals, 0),
+	], shader_tracer, 0)
 	
 	buffer_renderer_globals = rd.storage_buffer_create(12)
-	var uniform_globals_renderer := RDUniform.new()
-	uniform_globals_renderer.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
-	uniform_globals_renderer.binding = 0
-	uniform_globals_renderer.add_id(buffer_renderer_globals)
-	uniform_set_renderer_globals = rd.uniform_set_create([uniform_globals_renderer], shader_renderer, 0)
+	uniform_set_renderer_globals = rd.uniform_set_create([
+		IvRd.make_storage_buffer_uniform(buffer_renderer_globals, 0),
+	], shader_renderer, 0)
 	
 func setup_output_texture(width: int, height: int):
 	var tex_format = RDTextureFormat.new()
@@ -66,11 +64,9 @@ func setup_output_texture(width: int, height: int):
 	output_texture = rd.texture_create(tex_format, RDTextureView.new())
 	(rays.texture as Texture2DRD).texture_rd_rid = output_texture
 
-	var uniform_texture := RDUniform.new()
-	uniform_texture.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
-	uniform_texture.binding = 0
-	uniform_texture.add_id(output_texture)
-	uniform_set_output_texture = rd.uniform_set_create([uniform_texture], shader_renderer, 2)
+	uniform_set_output_texture = rd.uniform_set_create([
+		IvRd.make_image_uniform(output_texture, 0)
+	], shader_renderer, 2)
 
 @warning_ignore("shadowed_variable", "shadowed_global_identifier")
 func trace(seed: int, ray_count: int, bounce_count: int):
@@ -83,11 +79,14 @@ func trace(seed: int, ray_count: int, bounce_count: int):
 		if buffer_paths:
 			rd.free_rid(buffer_paths)
 		buffer_paths = rd.storage_buffer_create(ray_count * bounce_count * 3 * 4)
-		var uniform_paths := RDUniform.new()
-		uniform_paths.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
-		uniform_paths.binding = 0
-		uniform_paths.add_id(buffer_paths)
-		uniform_set_paths = rd.uniform_set_create([uniform_paths], shader_tracer, 1)
+	
+		if buffer_ray_attributes:
+			rd.free_rid(buffer_ray_attributes)
+		buffer_ray_attributes = rd.storage_buffer_create(ray_count)
+		uniform_set_paths = rd.uniform_set_create([
+			IvRd.make_storage_buffer_uniform(buffer_paths, 0),
+			IvRd.make_storage_buffer_uniform(buffer_ray_attributes, 1)
+		], shader_tracer, 1)
 	
 	var compute_list := rd.compute_list_begin()
 	rd.compute_list_bind_compute_pipeline(compute_list, pipeline_tracer)
@@ -95,15 +94,6 @@ func trace(seed: int, ray_count: int, bounce_count: int):
 	rd.compute_list_bind_uniform_set(compute_list, uniform_set_paths, 1)
 	rd.compute_list_dispatch(compute_list, ray_count, 1, 1)
 	rd.compute_list_end()
-
-	#var time:= Time.get_ticks_msec()
-	#rd.submit()
-	#rd.sync()
-	#print(Time.get_ticks_msec() - time)
-
-	#var output_bytes := rd.buffer_get_data(buffer)
-	#var output := output_bytes.to_float32_array()
-	#print("Output: ", output)
 
 func render_at_position(distance: float):
 	var globals_array := PackedFloat32Array([distance]).to_byte_array()
@@ -118,28 +108,11 @@ func render_at_position(distance: float):
 	rd.compute_list_dispatch(compute_list_renderer, ray_count, 1, 1)
 	rd.compute_list_end()
 
-	#var time_r := Time.get_ticks_msec()
-	#rd.submit()
-	#rd.sync()
-	#print(Time.get_ticks_msec() - time_r)
-
-	#var output_bytes := rd.buffer_get_data(buffer)
-	#var output := output_bytes.to_float32_array()
-	#print("Output: ", output)
-	
-	#var rd_g = RenderingServer.get_rendering_device()
-	#var byte_data : PackedByteArray = rd.texture_get_data(texture, 0)
-	#var image := Image.create_from_data(1920, 1080, false, Image.FORMAT_RGBAF, byte_data)
-	#image.save_jpg("/Users/lukas/Downloads/test.jpg")
-
-	#var texture_g := rd_g.texture_create(tex_format, RDTextureView.new(), [byte_data])
-	#(rays.texture as Texture2DRD).texture_rd_rid = texture_g
-
 func _physics_process(delta):
 	if Input.is_action_just_pressed("space"):
-		trace(randi(), 1024 * 1000 * 10, 5)
+		trace(randi(), 1024 * 100, 5)
 		start_time = Time.get_ticks_msec()
 	
 	if start_time > 0.0:
-		fader.fade(output_texture, 0.01 ** delta)
+		fader.fade(output_texture, 0.9 ** delta)
 		render_at_position((Time.get_ticks_msec() - start_time) / 1000.0 * 50.0)

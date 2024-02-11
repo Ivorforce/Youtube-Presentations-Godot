@@ -18,6 +18,11 @@ layout(set = 1, binding = 0, std430) restrict writeonly buffer Paths {
 }
 paths;
 
+layout(set = 1, binding = 1, std430) restrict buffer Rays {
+    float attributes[];
+}
+rays;
+
 ////////////////////////////
 
 // Hash function from H. Schechter & R. Bridson, goo.gl/RXiKaH
@@ -45,6 +50,8 @@ vec2 directionFromAngle(float rad) {
 ////////////////////////////
 
 void main() {
+    rays.attributes[gl_GlobalInvocationID.x] = Random(gl_GlobalInvocationID.x ^ globals.seed ^ 21389182);
+    
     uint bufIdx = gl_GlobalInvocationID.x * 3;
     vec2 position = vec2(Random(gl_GlobalInvocationID.x ^ globals.seed) * 5760.0 - 1000, 0.0);
     vec2 direction = directionFromAngle(-0.2);
