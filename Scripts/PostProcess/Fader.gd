@@ -3,6 +3,7 @@ class_name Fader extends Object
 var rd: RenderingDevice
 var shader_fader: RID
 
+@warning_ignore("shadowed_variable")
 func init(rd: RenderingDevice):
 	self.rd = rd
 	shader_fader = rd.shader_create_from_spirv(load("res://Scripts/PostProcess/fader.glsl").get_spirv())

@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://bxleni17317iw"]
+[gd_scene load_steps=15 format=3 uid="uid://bxleni17317iw"]
 
 [ext_resource type="Shader" path="res://Scripts/Objects/sky.gdshader" id="1_cseh1"]
 [ext_resource type="Environment" uid="uid://ctprkvqrvelvt" path="res://environment.tres" id="3_sigj7"]
@@ -13,6 +13,9 @@ shader_parameter/bottomColor = Color(0.0470588, 0.0470588, 0.0470588, 1)
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_ivbho"]
 
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_mo578"]
+blend_mode = 1
+
 [sub_resource type="Texture2DRD" id="Texture2DRD_c8ewi"]
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_6gduo"]
@@ -21,8 +24,6 @@ shader_parameter/bottomColor = Color(0.0470588, 0.0470588, 0.0470588, 1)
 font = ExtResource("6_ae0hi")
 font_size = 150
 
-[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_1qmds"]
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_jlc67"]
 shader = ExtResource("4_ar74u")
 
@@ -30,9 +31,6 @@ shader = ExtResource("4_ar74u")
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_1u4u2"]
 gradient = SubResource("Gradient_6se6l")
-
-[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_h2oyt"]
-distance = 3.87156
 
 [node name="RaytracerSurface" type="Node2D"]
 
@@ -43,6 +41,7 @@ texture = SubResource("PlaceholderTexture2D_ivbho")
 centered = false
 
 [node name="Rays" type="Sprite2D" parent="."]
+material = SubResource("CanvasItemMaterial_mo578")
 texture = SubResource("Texture2DRD_c8ewi")
 centered = false
 
@@ -54,6 +53,7 @@ environment = ExtResource("3_sigj7")
 camera_attributes = SubResource("CameraAttributesPractical_6gduo")
 
 [node name="Person" type="Label" parent="."]
+visible = false
 offset_left = 209.0
 offset_top = 819.0
 offset_right = 303.0
@@ -61,21 +61,13 @@ offset_bottom = 970.0
 text = ""
 label_settings = SubResource("LabelSettings_fnjd2")
 
-[node name="StaticBody2D" type="StaticBody2D" parent="."]
+[node name="Surface" type="Sprite2D" parent="."]
+visible = false
+material = SubResource("ShaderMaterial_jlc67")
 position = Vector2(0, 969)
 scale = Vector2(7.50781, 109)
-collision_mask = 2
-physics_material_override = SubResource("PhysicsMaterial_1qmds")
-
-[node name="Surface" type="Sprite2D" parent="StaticBody2D"]
-material = SubResource("ShaderMaterial_jlc67")
 texture = SubResource("GradientTexture1D_1u4u2")
 centered = false
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D"]
-visible = false
-position = Vector2(66.5973, 3.88991)
-shape = SubResource("WorldBoundaryShape2D_h2oyt")
 
 [node name="Raytracer" type="Node2D" parent="."]
 script = ExtResource("5_pqso6")
