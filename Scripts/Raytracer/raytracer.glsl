@@ -18,7 +18,7 @@ layout(set = 1, binding = 0, std430) restrict writeonly buffer Paths {
 }
 paths;
 
-layout(set = 1, binding = 1, std430) restrict buffer Rays {
+layout(set = 1, binding = 1, std430) restrict writeonly buffer Rays {
     float attributes[];
 }
 rays;
@@ -42,27 +42,42 @@ float Random(uint seed)
     return float(Hash(seed)) / 4294967295.0; // 2^32-1
 }
 
+////////////////////////////
+
 
 vec2 directionFromAngle(float rad) {
     return vec2(sin(rad), cos(rad));
 }
 
+float colorDist(float hue1, float hue2) {
+    float d = abs(hue1 - hue2);
+    return d < 0.5 ? d : (1.0 - d);
+}
+
 ////////////////////////////
 
 void main() {
-    rays.attributes[gl_GlobalInvocationID.x] = Random(gl_GlobalInvocationID.x ^ globals.seed ^ 21389182);
-    
+    // ray hue
+    float rayHue = Random(gl_GlobalInvocationID.x ^ globals.seed ^ 21389182);
+    rays.attributes[gl_GlobalInvocationID.x] = rayHue;
+
+    float distToBlue = colorDist(rayHue, 0.64);
+    float atmosphereDistToBounceFactor = 10.0 + (50000.0 * distToBlue);
+    float distToFloorColor = colorDist(rayHue, 0.375);
+
     uint bufIdx = gl_GlobalInvocationID.x * 3;
-    vec2 position = vec2(Random(gl_GlobalInvocationID.x ^ globals.seed) * 5760.0 - 1000, 0.0);
-    vec2 direction = directionFromAngle(-0.2);
-    float lightness = 1.0;
+    vec2 direction = directionFromAngle(-0.1);
+    vec2 line = vec2(-direction.y, direction.x);
+    vec2 position = (Random(gl_GlobalInvocationID.x ^ globals.seed) * 200.0)  * line + vec2(1100.0, 0.0);
+    float lightness = 0.5;
 
     paths.data[bufIdx] = position.x;
     paths.data[bufIdx + 1] = position.y;
+    paths.data[bufIdx + 2] = lightness;
 
     for (uint b = 1; b < globals.bounceCount; b++) {
         bufIdx += globals.rayCount * 3;
-        float distanceBeforeAtmosphereBounce = -log(1 - Random(gl_GlobalInvocationID.x ^ globals.seed ^ b)) / 0.0001;
+        float distanceBeforeAtmosphereBounce = -log(1 - Random(gl_GlobalInvocationID.x ^ globals.seed ^ b)) * atmosphereDistToBounceFactor;
         
         if (direction.y > 0.0) {
             float bottomPos = 970.0;
@@ -70,31 +85,31 @@ void main() {
             
             if (distanceBeforeBottomBounce < distanceBeforeAtmosphereBounce) {
                 position += direction * distanceBeforeBottomBounce;
+                
+                direction = directionFromAngle(
+                    Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
+                    * M_PI + M_PI * 0.5
+                );
+                lightness *= (1.0 - pow(distToFloorColor, 2)) * 0.1;
 
                 paths.data[bufIdx] = position.x;
                 paths.data[bufIdx + 1] = position.y;
                 paths.data[bufIdx + 2] = lightness;
 
-                direction = directionFromAngle(
-                    Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
-                    * M_PI + M_PI * 0.5
-                );
-                lightness *= 0.2;
-                
                 continue;
             }
         }
         
         position += direction * distanceBeforeAtmosphereBounce;
         
-        paths.data[bufIdx] = position.x;
-        paths.data[bufIdx + 1] = position.y;
-        paths.data[bufIdx + 2] = lightness;
-        
         direction = directionFromAngle(
             Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
             * 2.0 * M_PI
         );
-        lightness *= 0.5;
+        lightness *= 0.95;
+
+        paths.data[bufIdx] = position.x;
+        paths.data[bufIdx + 1] = position.y;
+        paths.data[bufIdx + 2] = lightness;
     }
 }

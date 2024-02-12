@@ -8,6 +8,7 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 layout(set = 0, binding = 0, std430) restrict readonly buffer Globals {
     float distance;
+    float prevDistance;
     uint rayCount;
     uint bounceCount;
 }
@@ -23,7 +24,8 @@ layout(set = 1, binding = 1, std430) restrict buffer Rays {
 }
 rays;
 
-layout(set = 2, binding = 0, rgba32f) uniform image2D texture;
+layout(set = 2, binding = 0, rgba32f) uniform image2D pathsTexture;
+layout(set = 2, binding = 1, rgba32f) uniform image2D splotchTexture;
 
 ////////////////////////////
 // From here https://codepen.io/zhao-huang/pen/YzQYZKW
@@ -634,33 +636,56 @@ vec3 srgb_to_okhsv(float r, float g, float b) {
 
 ////////////////////////////
 
+void renderSplotch(ivec2 pos, vec3 color, bool isBackground) {
+    int rad = 7;
+    for (int x = -rad; x <= rad; x++) {
+        for (int y = -rad; y <= rad; y++) {
+            if (x * x + y * y > rad * rad) {
+                continue;
+            }
+            
+            vec4 curColor = imageLoad(splotchTexture, pos + ivec2(x, y));
+            imageStore(
+                splotchTexture, pos + ivec2(x, y), vec4(curColor.rgb + color / 78.5, 1.0)
+            );
+        }
+    }
+}
+
 void main() {
     float rayHue = rays.attributes[gl_GlobalInvocationID.x];
     
     uint bufIdx = gl_GlobalInvocationID.x * 3;
+    uint prevIdx = bufIdx;
     vec2 startPoint = vec2(paths.data[bufIdx], paths.data[bufIdx + 1]);
-    float travelableDistance = globals.distance;
+    float traveledDistance = 0.0;
 
     for (int b = 1; b < globals.bounceCount; b++) {
+        prevIdx = bufIdx;
         bufIdx += globals.rayCount * 3;
 
         vec2 endPoint = vec2(paths.data[bufIdx], paths.data[bufIdx + 1]);
         vec2 diffToEnd = endPoint - startPoint;
         float distToEnd = length(diffToEnd);
-        float reachedRatio = travelableDistance / distToEnd;
-        
-        ivec2 pixelCoords = ivec2(startPoint + diffToEnd * min(reachedRatio, 1.0));
-        vec4 curPixel = imageLoad(texture, pixelCoords);
-        vec3 rayColor = okhsl_to_srgb(vec3(rayHue, 1.0, paths.data[bufIdx + 2]));
-        imageStore(
-            texture, pixelCoords, vec4(min(vec3(1.0), max(curPixel.rgb, rayColor)), 1.0)
-        );
+        float reachedRatio = (globals.distance - traveledDistance) / distToEnd;
+        float prevReachedRatio = (globals.prevDistance - traveledDistance) / distToEnd;
         
         if (reachedRatio <= 1.0) {
+            ivec2 pixelCoords = ivec2(startPoint + diffToEnd * min(reachedRatio, 1.0));
+            vec4 curPixel = imageLoad(pathsTexture, pixelCoords);
+            vec3 rayColor = okhsv_to_srgb(rayHue, 1.0, paths.data[prevIdx + 2]);
+            imageStore(
+                pathsTexture, pixelCoords, vec4(curPixel.rgb + rayColor, 1.0)
+            );
             return;
         }
         
+        if (prevReachedRatio < 1.0) {
+            vec3 rayColor = okhsv_to_srgb(rayHue, 1.0, paths.data[bufIdx + 2]);
+            renderSplotch(ivec2(endPoint), rayColor, true);
+        }
+
         startPoint = endPoint;
-        travelableDistance -= distToEnd;
+        traveledDistance += distToEnd;
     }
 }

@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://bxleni17317iw"]
+[gd_scene load_steps=16 format=3 uid="uid://bxleni17317iw"]
 
 [ext_resource type="Shader" path="res://Scripts/Objects/sky.gdshader" id="1_cseh1"]
 [ext_resource type="Environment" uid="uid://ctprkvqrvelvt" path="res://environment.tres" id="3_sigj7"]
@@ -9,7 +9,7 @@
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_8pvj0"]
 shader = ExtResource("1_cseh1")
 shader_parameter/range = Vector2(0, 1080)
-shader_parameter/bottomColor = Color(0.0470588, 0.0470588, 0.0470588, 1)
+shader_parameter/bottomColor = Color(0, 0, 0, 1)
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_ivbho"]
 
@@ -17,6 +17,8 @@ shader_parameter/bottomColor = Color(0.0470588, 0.0470588, 0.0470588, 1)
 blend_mode = 1
 
 [sub_resource type="Texture2DRD" id="Texture2DRD_c8ewi"]
+
+[sub_resource type="Texture2DRD" id="Texture2DRD_brncx"]
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_6gduo"]
 
@@ -40,9 +42,14 @@ scale = Vector2(1920, 1080)
 texture = SubResource("PlaceholderTexture2D_ivbho")
 centered = false
 
-[node name="Rays" type="Sprite2D" parent="."]
+[node name="Splotches" type="Sprite2D" parent="."]
 material = SubResource("CanvasItemMaterial_mo578")
 texture = SubResource("Texture2DRD_c8ewi")
+centered = false
+
+[node name="Rays" type="Sprite2D" parent="."]
+material = SubResource("CanvasItemMaterial_mo578")
+texture = SubResource("Texture2DRD_brncx")
 centered = false
 
 [node name="Camera2D" type="Camera2D" parent="."]
