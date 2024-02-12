@@ -636,17 +636,37 @@ vec3 srgb_to_okhsv(float r, float g, float b) {
 
 ////////////////////////////
 
-void renderSplotch(ivec2 pos, vec3 color, bool isBackground) {
-    int rad = 7;
+void renderSplotch(ivec2 pos, vec3 color) {
+    int rad = 3;
     for (int x = -rad; x <= rad; x++) {
         for (int y = -rad; y <= rad; y++) {
             if (x * x + y * y > rad * rad) {
                 continue;
             }
-            
-            vec4 curColor = imageLoad(splotchTexture, pos + ivec2(x, y));
+
+            ivec2 texPos = pos + ivec2(x, y);
+            float str = (float(rad) - sqrt(float(x * x + y * y))) / float(rad);
+            vec4 curColor = imageLoad(splotchTexture, texPos);
             imageStore(
-                splotchTexture, pos + ivec2(x, y), vec4(curColor.rgb + color / 78.5, 1.0)
+                splotchTexture, texPos, vec4(curColor.rgb + color / 2.0 * str, 1.0)
+            );
+        }
+    }
+}
+
+void renderHead(ivec2 pos, vec3 color) {
+    int rad = 3;
+    for (int x = -rad; x <= rad; x++) {
+        for (int y = -rad; y <= rad; y++) {
+            if (x * x + y * y > rad * rad) {
+                continue;
+            }
+
+            ivec2 texPos = pos + ivec2(x, y);
+            float str = (float(rad) - sqrt(float(x * x + y * y))) / float(rad);
+            vec4 curColor = imageLoad(pathsTexture, texPos);
+            imageStore(
+                pathsTexture, texPos, vec4(curColor.rgb + color / 2.0 * str, 1.0)
             );
         }
     }
@@ -655,14 +675,14 @@ void renderSplotch(ivec2 pos, vec3 color, bool isBackground) {
 void main() {
     float rayHue = rays.attributes[gl_GlobalInvocationID.x];
     
-    uint bufIdx = gl_GlobalInvocationID.x * 3;
+    uint bufIdx = gl_GlobalInvocationID.x * 4;
     uint prevIdx = bufIdx;
     vec2 startPoint = vec2(paths.data[bufIdx], paths.data[bufIdx + 1]);
     float traveledDistance = 0.0;
 
     for (int b = 1; b < globals.bounceCount; b++) {
         prevIdx = bufIdx;
-        bufIdx += globals.rayCount * 3;
+        bufIdx += globals.rayCount * 4;
 
         vec2 endPoint = vec2(paths.data[bufIdx], paths.data[bufIdx + 1]);
         vec2 diffToEnd = endPoint - startPoint;
@@ -672,17 +692,15 @@ void main() {
         
         if (reachedRatio <= 1.0) {
             ivec2 pixelCoords = ivec2(startPoint + diffToEnd * min(reachedRatio, 1.0));
-            vec4 curPixel = imageLoad(pathsTexture, pixelCoords);
             vec3 rayColor = okhsv_to_srgb(rayHue, 1.0, paths.data[prevIdx + 2]);
-            imageStore(
-                pathsTexture, pixelCoords, vec4(curPixel.rgb + rayColor, 1.0)
-            );
+            renderHead(pixelCoords, rayColor * 0.02);
             return;
         }
         
         if (prevReachedRatio < 1.0) {
             vec3 rayColor = okhsv_to_srgb(rayHue, 1.0, paths.data[bufIdx + 2]);
-            renderSplotch(ivec2(endPoint), rayColor, true);
+            float strength = paths.data[bufIdx + 3] > 0.5 ? 0.004 : 1.0;
+            renderSplotch(ivec2(endPoint), rayColor * strength);
         }
 
         startPoint = endPoint;

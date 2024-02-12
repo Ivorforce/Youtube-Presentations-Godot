@@ -88,7 +88,7 @@ func trace(seed: int, ray_count: int, bounce_count: int):
 		
 		if buffer_paths:
 			rd.free_rid(buffer_paths)
-		buffer_paths = rd.storage_buffer_create(ray_count * bounce_count * 3 * 4)
+		buffer_paths = rd.storage_buffer_create(ray_count * bounce_count * 4 * 4)
 	
 		if buffer_ray_attributes:
 			rd.free_rid(buffer_ray_attributes)

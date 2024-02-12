@@ -21,6 +21,7 @@ blend_mode = 1
 [sub_resource type="Texture2DRD" id="Texture2DRD_brncx"]
 
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_6gduo"]
+auto_exposure_enabled = true
 
 [sub_resource type="LabelSettings" id="LabelSettings_fnjd2"]
 font = ExtResource("6_ae0hi")

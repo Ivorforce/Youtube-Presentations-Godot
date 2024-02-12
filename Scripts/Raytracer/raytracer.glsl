@@ -96,23 +96,23 @@ void main() {
     float rayHue = Random(gl_GlobalInvocationID.x ^ globals.seed ^ 21389182);
     rays.attributes[gl_GlobalInvocationID.x] = rayHue;
 
-    float distToBlue = colorDist(rayHue, 0.64);
-    float atmosphereDistToBounceFactor = 10.0 + (50000.0 * distToBlue);
-    float distToFloorColor = colorDist(rayHue, 0.375);
+    float distToBlue = colorDist(rayHue, 0.65);
+    float atmosphereDistToBounceFactor = 4000.0 + (100000.0 * sqrt(distToBlue));
 
-    uint bufIdx = gl_GlobalInvocationID.x * 3;
+    uint bufIdx = gl_GlobalInvocationID.x * 4;
     vec2 direction = directionFromAngle(-0.1);
     vec2 line = vec2(-direction.y, direction.x);
 //    vec2 position = (Random(gl_GlobalInvocationID.x ^ globals.seed) * 200.0)  * line + vec2(1100.0, 0.0);
-    vec2 position = ((Random(gl_GlobalInvocationID.x ^ globals.seed) - 0.333) * 1920.0 * 5) * line + vec2(1920.0, 0.0);
-    float lightness = 0.5;
+    vec2 position = ((Random(gl_GlobalInvocationID.x ^ globals.seed) - 0.5) * 1920.0 * 3) * line + vec2(1920.0, 0.0) + line * 1920.0 / 2.0;
+    float lightness = 1.0;
 
     paths.data[bufIdx] = position.x;
     paths.data[bufIdx + 1] = position.y;
     paths.data[bufIdx + 2] = lightness;
+    paths.data[bufIdx + 3] = 0.0;
 
     for (uint b = 1; b < globals.bounceCount; b++) {
-        bufIdx += globals.rayCount * 3;
+        bufIdx += globals.rayCount * 4;
         float distanceBeforeAtmosphereBounce = -log(1 - Random(gl_GlobalInvocationID.x ^ globals.seed ^ b)) * atmosphereDistToBounceFactor;
         
         int bounceTarget = 0;
@@ -144,22 +144,22 @@ void main() {
                 Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
                 * M_PI + M_PI * 0.5
             );
-            lightness *= (1.0 - pow(distToFloorColor, 2)) * 0.1;
+            lightness *= 0.2;
         }
         else if (bounceTarget > 1) {
             direction = rotate2D(normalize(position - sphereCenter0), Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b) * M_PI - M_PI / 2);
-            lightness *= 0.2;
+            lightness *= 0.8;
         }
         else {
             direction = directionFromAngle(
                 Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
                 * 2.0 * M_PI
             );
-            lightness *= 0.95;
         }
         
         paths.data[bufIdx] = position.x;
         paths.data[bufIdx + 1] = position.y;
         paths.data[bufIdx + 2] = lightness;
+        paths.data[bufIdx + 3] = float(bounceTarget);
     }
 }
