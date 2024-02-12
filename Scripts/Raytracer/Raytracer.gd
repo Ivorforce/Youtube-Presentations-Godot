@@ -127,7 +127,7 @@ func render_at_position(distance: float):
 
 func _physics_process(delta):
 	if Input.is_action_just_pressed("space"):
-		trace(randi(), 1024 * 500, 10)
+		trace(randi(), 1024 * 1000, 10)
 		start_time = Time.get_ticks_msec()
 		prev_distance = 0.0
 	

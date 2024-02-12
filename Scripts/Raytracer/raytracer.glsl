@@ -54,6 +54,41 @@ float colorDist(float hue1, float hue2) {
     return d < 0.5 ? d : (1.0 - d);
 }
 
+vec2 rotate2D(vec2 v, float angle) {
+    float c = cos(angle);
+    float s = sin(angle);
+    return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
+}
+
+// Made by google gemini. ya I'm lazy
+float closestLineCircleDistance(vec2 rayOrigin, vec2 rayDirection, vec2 circleCenter, float circleRadius) {
+    vec2 oc = rayOrigin - circleCenter;
+    float a = dot(rayDirection, rayDirection);
+    float b = 2.0 * dot(rayDirection, oc);
+    float c = dot(oc, oc) - circleRadius * circleRadius;
+
+    // Solve the quadratic equation
+    float discriminant = b * b - 4.0 * a * c;
+    if (discriminant < 0.0) {
+        // No intersection
+        return -1.0;
+    }
+
+    float sqrt_discriminant = sqrt(discriminant);
+    
+    // Check for valid intersection (positive and in forward direction)
+    float t1 = (-b - sqrt_discriminant) / (2.0 * a);
+    float t2 = (-b + sqrt_discriminant) / (2.0 * a);
+    if (t1 > 0.0) {
+        return t1;
+    } else if (t2 > 0.0) {
+        return t2;
+    }
+
+    // No valid intersection
+    return -1.0;
+}
+
 ////////////////////////////
 
 void main() {
@@ -68,7 +103,8 @@ void main() {
     uint bufIdx = gl_GlobalInvocationID.x * 3;
     vec2 direction = directionFromAngle(-0.1);
     vec2 line = vec2(-direction.y, direction.x);
-    vec2 position = (Random(gl_GlobalInvocationID.x ^ globals.seed) * 200.0)  * line + vec2(1100.0, 0.0);
+//    vec2 position = (Random(gl_GlobalInvocationID.x ^ globals.seed) * 200.0)  * line + vec2(1100.0, 0.0);
+    vec2 position = ((Random(gl_GlobalInvocationID.x ^ globals.seed) - 0.333) * 1920.0 * 5) * line + vec2(1920.0, 0.0);
     float lightness = 0.5;
 
     paths.data[bufIdx] = position.x;
@@ -79,35 +115,49 @@ void main() {
         bufIdx += globals.rayCount * 3;
         float distanceBeforeAtmosphereBounce = -log(1 - Random(gl_GlobalInvocationID.x ^ globals.seed ^ b)) * atmosphereDistToBounceFactor;
         
+        int bounceTarget = 0;
+        float bounceDistance = distanceBeforeAtmosphereBounce;
+
         if (direction.y > 0.0) {
             float bottomPos = 970.0;
             float distanceBeforeBottomBounce = (bottomPos - position.y) / direction.y;
-            
+
             if (distanceBeforeBottomBounce < distanceBeforeAtmosphereBounce) {
-                position += direction * distanceBeforeBottomBounce;
-                
-                direction = directionFromAngle(
-                    Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
-                    * M_PI + M_PI * 0.5
-                );
-                lightness *= (1.0 - pow(distToFloorColor, 2)) * 0.1;
-
-                paths.data[bufIdx] = position.x;
-                paths.data[bufIdx + 1] = position.y;
-                paths.data[bufIdx + 2] = lightness;
-
-                continue;
+                bounceTarget = 1;
+                bounceDistance = distanceBeforeBottomBounce;
             }
         }
-        
-        position += direction * distanceBeforeAtmosphereBounce;
-        
-        direction = directionFromAngle(
-            Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
-            * 2.0 * M_PI
-        );
-        lightness *= 0.95;
 
+        vec2 sphereCenter0 = vec2(1000, 500);
+        float sphereDistance0 = closestLineCircleDistance(position, direction, sphereCenter0, 100);
+        if (sphereDistance0 > 0 && sphereDistance0 < bounceDistance) {
+            bounceDistance = sphereDistance0;
+            bounceTarget = 2;
+        }
+        
+        ////
+
+        position += direction * bounceDistance;
+
+        if (bounceTarget == 1) {
+            direction = directionFromAngle(
+                Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
+                * M_PI + M_PI * 0.5
+            );
+            lightness *= (1.0 - pow(distToFloorColor, 2)) * 0.1;
+        }
+        else if (bounceTarget > 1) {
+            direction = rotate2D(normalize(position - sphereCenter0), Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b) * M_PI - M_PI / 2);
+            lightness *= 0.2;
+        }
+        else {
+            direction = directionFromAngle(
+                Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
+                * 2.0 * M_PI
+            );
+            lightness *= 0.95;
+        }
+        
         paths.data[bufIdx] = position.x;
         paths.data[bufIdx + 1] = position.y;
         paths.data[bufIdx + 2] = lightness;
