@@ -734,11 +734,19 @@ uint maxBounces(uint mode, inout float surfaceMultiplier) {
         return 2;
     }
     
+    if (mode == 5) {
+        if (!isEqModuloOne(paths.data[bufIdx1Bounce + 3], 2)) {
+            return 0;
+        }
+
+        return 2;
+    }
+    
     return 0;
 }
 
 void main() {
-    float surfaceMultiplier = 0.004;
+    float surfaceMultiplier = 0.007;
     uint bounceCount = maxBounces(globals.filterMode, surfaceMultiplier);
     float rayHue = rays.attributes[gl_GlobalInvocationID.x];
     

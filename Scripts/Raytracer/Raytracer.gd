@@ -49,7 +49,7 @@ func _ready():
 	
 	setup_output_texture(1920, 1080)
 	
-	buffer_raytracer_globals = rd.storage_buffer_create(12)
+	buffer_raytracer_globals = rd.storage_buffer_create(16)
 	uniform_set_raytracer_globals = rd.uniform_set_create([
 		IvRd.make_storage_buffer_uniform(buffer_raytracer_globals, 0),
 	], shader_tracer, 0)
@@ -79,8 +79,10 @@ func setup_output_texture(width: int, height: int):
 	], shader_renderer, 2)
 
 @warning_ignore("shadowed_variable", "shadowed_global_identifier")
-func trace(seed: int, ray_count: int, bounce_count: int):
-	rd.buffer_update(buffer_raytracer_globals, 0, 12, PackedInt32Array([seed, ray_count, bounce_count]).to_byte_array())
+func trace(seed: int, ray_count: int, bounce_count: int, setup: int):
+	rd.buffer_update(buffer_raytracer_globals, 0, 16, PackedInt32Array([
+		seed, ray_count, bounce_count, setup
+	]).to_byte_array())
 	
 	if self.ray_count != ray_count or self.bounce_count != bounce_count:
 		self.ray_count = ray_count
@@ -131,10 +133,12 @@ func render_at_position(distance: float, filterMode: int):
 
 func _physics_process(delta):
 	if Input.is_action_just_pressed("space"):
-		trace(randi(), 1024 * 1400, 10)
+		#trace(randi(), 1024 * 1400, 10, 0)
+		trace(randi(), 1024 * 500, 10, 1)
 		start_time = Time.get_ticks_msec()
 		prev_distance = 0.0
 	
 	if start_time > 0.0:
 		fader.fade(paths_texture, 0.0001 ** delta)
-		render_at_position(9900 + (Time.get_ticks_msec() - start_time) / 1000.0 * 200.0, 1)
+		#render_at_position(9900 + (Time.get_ticks_msec() - start_time) / 1000.0 * 200.0, 0)
+		render_at_position(0 + (Time.get_ticks_msec() - start_time) / 1000.0 * 200.0, 0)

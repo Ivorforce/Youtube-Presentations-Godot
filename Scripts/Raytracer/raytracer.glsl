@@ -2,6 +2,8 @@
 #version 450
 
 #define M_PI 3.1415926535897932384626433832795
+#define M_SETUP_OUTSIDE 0
+#define M_SETUP_INSIDE 1
 
 // Invocations in the (x, y, z) dimension
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
@@ -10,6 +12,7 @@ layout(set = 0, binding = 0, std430) restrict readonly buffer Globals {
     uint seed;
     uint rayCount;
     uint bounceCount;
+    uint setup;
 }
 globals;
 
@@ -89,6 +92,23 @@ float closestLineCircleDistance(vec2 rayOrigin, vec2 rayDirection, vec2 circleCe
     return -1.0;
 }
 
+float lineInnerRectDistance(vec2 rayOrigin, vec2 rayDirection, vec2 rectMin, vec2 rectMax, out vec2 normal) {
+    bool isXPositive = rayDirection.x > 0.0;
+    float xDist = ((isXPositive ? rectMax : rectMin).x - rayOrigin.x) / rayDirection.x;
+    
+    bool isYPositive = rayDirection.y > 0.0;
+    float yDist = ((isYPositive ? rectMax : rectMin).y - rayOrigin.y) / rayDirection.y;
+
+    if (xDist < yDist) {
+        normal = vec2(isXPositive ? -1 : 1, 0);
+        return xDist;
+    }
+    else {
+        normal = vec2(0, isYPositive ? -1 : 1);
+        return yDist;
+    }
+}
+
 ////////////////////////////
 
 void main() {
@@ -96,16 +116,30 @@ void main() {
     float rayHue = Random(gl_GlobalInvocationID.x ^ globals.seed ^ 21389182);
     rays.attributes[gl_GlobalInvocationID.x] = rayHue;
 
-    float distToBlue = colorDist(rayHue, 0.65);
-    float atmosphereDistToBounceFactor = 2000.0 + (200000.0 * sqrt(distToBlue));
-
     uint bufIdx = gl_GlobalInvocationID.x * 4;
-    vec2 direction = directionFromAngle(-0.1);
-    vec2 line = vec2(-direction.y, direction.x);
-//    vec2 position = (Random(gl_GlobalInvocationID.x ^ globals.seed) * 200.0)  * line + vec2(1100.0, 0.0);
-    vec2 position = ((Random(gl_GlobalInvocationID.x ^ globals.seed) - 0.74) * 1920.0 * 3) * line + vec2(1920.0, -10000.0) + line * 1920.0 / 2.0;
+
+    float distToBlue = colorDist(rayHue, 0.65);
+    float atmosphereDistToBounceFactor = 2000.0 + (200000.0 * distToBlue);
+    
+    vec2 direction;
+    vec2 position;
     float lightness = 1.0;
 
+    vec2 sphereCenter0 = vec2(1000, 500);
+    
+    if (globals.setup == M_SETUP_OUTSIDE) {
+        direction = directionFromAngle(-0.1);
+
+        vec2 line = vec2(-direction.y, direction.x);
+        //    vec2 position = (Random(gl_GlobalInvocationID.x ^ globals.seed) * 200.0)  * line + vec2(1100.0, 0.0);
+        position = ((Random(gl_GlobalInvocationID.x ^ globals.seed) - 0.74) * 1920.0 * 3) * line + vec2(1920.0, -10000.0) + line * 1920.0 / 2.0;
+    }
+    else {
+        direction = directionFromAngle(Random(gl_GlobalInvocationID.x ^ globals.seed) * M_PI * 2);
+
+        position = vec2(1000, 150) + direction * 5;
+    }
+    
     paths.data[bufIdx] = position.x;
     paths.data[bufIdx + 1] = position.y;
     paths.data[bufIdx + 2] = lightness;
@@ -113,26 +147,38 @@ void main() {
 
     for (uint b = 1; b < globals.bounceCount; b++) {
         bufIdx += globals.rayCount * 4;
-        float distanceBeforeAtmosphereBounce = -log(1 - Random(gl_GlobalInvocationID.x ^ globals.seed ^ b)) * atmosphereDistToBounceFactor;
         
-        int bounceTarget = 0;
-        float bounceDistance = distanceBeforeAtmosphereBounce;
+        int bounceTarget;
+        float bounceDistance;
+        vec2 bounceNormal;
 
-        if (direction.y > 0.0) {
-            float bottomPos = 970.0;
-            float distanceBeforeBottomBounce = (bottomPos - position.y) / direction.y;
+        if (globals.setup == M_SETUP_OUTSIDE) {
+            // Default bounce = atmosphere
+            bounceTarget = 0; 
+            bounceDistance = -log(1 - Random(gl_GlobalInvocationID.x ^ globals.seed ^ b)) * atmosphereDistToBounceFactor;
+            bounceNormal = vec2(0, -1);
 
-            if (distanceBeforeBottomBounce < distanceBeforeAtmosphereBounce) {
-                bounceTarget = 1;
-                bounceDistance = distanceBeforeBottomBounce;
+            if (direction.y > 0.0) {
+                float bottomPos = 970.0;
+                float distanceBeforeBottomBounce = (bottomPos - position.y) / direction.y;
+
+                if (distanceBeforeBottomBounce < bounceDistance) {
+                    bounceTarget = 1;
+                    bounceDistance = distanceBeforeBottomBounce;
+                    bounceNormal = vec2(0, -1);
+                }
             }
         }
+        else {
+            bounceTarget = 1;
+            bounceDistance = lineInnerRectDistance(position, direction, vec2(100, 100), vec2(1820, 980), bounceNormal);
+        }
 
-        vec2 sphereCenter0 = vec2(1000, 500);
         float sphereDistance0 = closestLineCircleDistance(position, direction, sphereCenter0, 100);
         if (sphereDistance0 > 0 && sphereDistance0 < bounceDistance) {
             bounceDistance = sphereDistance0;
             bounceTarget = 2;
+            bounceNormal = normalize(position + direction * sphereDistance0 - sphereCenter0);
         }
         
         ////
@@ -140,20 +186,22 @@ void main() {
         position += direction * bounceDistance;
 
         if (bounceTarget == 1) {
-            direction = directionFromAngle(
-                Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
-                * M_PI + M_PI * 0.5
+            direction = rotate2D(
+                bounceNormal,
+                Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b) * M_PI - M_PI / 2
             );
             lightness *= 0.2;
         }
         else if (bounceTarget > 1) {
-            direction = rotate2D(normalize(position - sphereCenter0), Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b) * M_PI - M_PI / 2);
+            direction = rotate2D(
+                bounceNormal,
+                Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b) * M_PI - M_PI / 2
+            );
             lightness *= 0.8;
         }
         else {
             direction = directionFromAngle(
-                Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b)
-                * 2.0 * M_PI
+                Random((gl_GlobalInvocationID.x * globals.bounceCount) ^ globals.seed ^ 2632789429 ^ b) * M_PI * 2
             );
         }
         
