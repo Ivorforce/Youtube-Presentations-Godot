@@ -54,7 +54,7 @@ func _ready():
 		IvRd.make_storage_buffer_uniform(buffer_raytracer_globals, 0),
 	], shader_tracer, 0)
 	
-	buffer_renderer_globals = rd.storage_buffer_create(16)
+	buffer_renderer_globals = rd.storage_buffer_create(20)
 	uniform_set_renderer_globals = rd.uniform_set_create([
 		IvRd.make_storage_buffer_uniform(buffer_renderer_globals, 0),
 	], shader_renderer, 0)
@@ -110,10 +110,14 @@ func trace(seed: int, ray_count: int, bounce_count: int):
 	rd.compute_list_dispatch(compute_list, ray_count, 1, 1)
 	rd.compute_list_end()
 
-func render_at_position(distance: float):
+func render_at_position(distance: float, filterMode: int):
+	# Skip the first frame of drawing backlog
+	if prev_distance == 0:
+		prev_distance = distance
+	
 	var globals_array := PackedFloat32Array([distance, prev_distance]).to_byte_array()
-	globals_array.append_array(PackedInt32Array([ray_count, bounce_count]).to_byte_array())
-	rd.buffer_update(buffer_renderer_globals, 0, 16, globals_array)
+	globals_array.append_array(PackedInt32Array([ray_count, bounce_count, filterMode]).to_byte_array())
+	rd.buffer_update(buffer_renderer_globals, 0, 20, globals_array)
 		
 	var compute_list_renderer := rd.compute_list_begin()
 	rd.compute_list_bind_compute_pipeline(compute_list_renderer, pipeline_renderer)
@@ -127,10 +131,10 @@ func render_at_position(distance: float):
 
 func _physics_process(delta):
 	if Input.is_action_just_pressed("space"):
-		trace(randi(), 1024 * 1000, 10)
+		trace(randi(), 1024 * 1400, 10)
 		start_time = Time.get_ticks_msec()
 		prev_distance = 0.0
 	
 	if start_time > 0.0:
-		fader.fade(paths_texture, 0.2 ** delta)
-		render_at_position((Time.get_ticks_msec() - start_time) / 1000.0 * 100.0)
+		fader.fade(paths_texture, 0.0001 ** delta)
+		render_at_position(9900 + (Time.get_ticks_msec() - start_time) / 1000.0 * 200.0, 1)

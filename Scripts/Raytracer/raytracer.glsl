@@ -97,13 +97,13 @@ void main() {
     rays.attributes[gl_GlobalInvocationID.x] = rayHue;
 
     float distToBlue = colorDist(rayHue, 0.65);
-    float atmosphereDistToBounceFactor = 4000.0 + (100000.0 * sqrt(distToBlue));
+    float atmosphereDistToBounceFactor = 2000.0 + (200000.0 * sqrt(distToBlue));
 
     uint bufIdx = gl_GlobalInvocationID.x * 4;
     vec2 direction = directionFromAngle(-0.1);
     vec2 line = vec2(-direction.y, direction.x);
 //    vec2 position = (Random(gl_GlobalInvocationID.x ^ globals.seed) * 200.0)  * line + vec2(1100.0, 0.0);
-    vec2 position = ((Random(gl_GlobalInvocationID.x ^ globals.seed) - 0.5) * 1920.0 * 3) * line + vec2(1920.0, 0.0) + line * 1920.0 / 2.0;
+    vec2 position = ((Random(gl_GlobalInvocationID.x ^ globals.seed) - 0.74) * 1920.0 * 3) * line + vec2(1920.0, -10000.0) + line * 1920.0 / 2.0;
     float lightness = 1.0;
 
     paths.data[bufIdx] = position.x;

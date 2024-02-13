@@ -11,6 +11,7 @@ layout(set = 0, binding = 0, std430) restrict readonly buffer Globals {
     float prevDistance;
     uint rayCount;
     uint bounceCount;
+    uint filterMode;
 }
 globals;
 
@@ -672,7 +673,73 @@ void renderHead(ivec2 pos, vec3 color) {
     }
 }
 
+bool isEqModuloOne(float a, float b) {
+    return abs(a - b) < 0.5;
+}
+
+uint maxBounces(uint mode, inout float surfaceMultiplier) {
+    if (mode == 0) {
+        return globals.bounceCount;
+    }
+
+    uint bufIdx = gl_GlobalInvocationID.x * 4;
+    uint bufIdx1Bounce = bufIdx + globals.rayCount * 4;
+    uint bufIdx2Bounce = bufIdx + globals.rayCount * 4 * 2;
+    
+    if (mode == 1) {
+        for (uint b = globals.bounceCount; b > 0; b--) {
+            uint curBufIdx = bufIdx + (b - 1) * globals.rayCount * 4;
+            if (paths.data[curBufIdx + 3] > 1.5) {
+                return b;
+            }
+        }
+
+        return 0;
+    }
+    
+    if (mode == 2) {
+        if (!isEqModuloOne(paths.data[bufIdx1Bounce + 3], 0)) {
+            return 0;
+        }
+        
+        for (uint b = 2; b < globals.bounceCount; b++) {
+            uint curBufIdx = bufIdx + b * globals.rayCount * 4;
+            float bounceType = paths.data[curBufIdx + 3];
+            if (isEqModuloOne(bounceType, 2)) {
+                surfaceMultiplier = 0.1;
+                return b + 1;
+            }
+            else if (!isEqModuloOne(bounceType, 0)) {
+                return 0;
+            }
+        }
+
+        return globals.bounceCount;
+    }
+    
+    if (mode == 3) {
+        if (!isEqModuloOne(paths.data[bufIdx1Bounce + 3], 1) || !isEqModuloOne(paths.data[bufIdx2Bounce + 3], 2)) {
+            return 0;
+        }
+
+        surfaceMultiplier = 0.015;
+        return 3;
+    }
+    
+    if (mode == 4) {
+        if (!isEqModuloOne(paths.data[bufIdx1Bounce + 3], 2)) {
+            return 0;
+        }
+
+        return 2;
+    }
+    
+    return 0;
+}
+
 void main() {
+    float surfaceMultiplier = 0.004;
+    uint bounceCount = maxBounces(globals.filterMode, surfaceMultiplier);
     float rayHue = rays.attributes[gl_GlobalInvocationID.x];
     
     uint bufIdx = gl_GlobalInvocationID.x * 4;
@@ -680,7 +747,7 @@ void main() {
     vec2 startPoint = vec2(paths.data[bufIdx], paths.data[bufIdx + 1]);
     float traveledDistance = 0.0;
 
-    for (int b = 1; b < globals.bounceCount; b++) {
+    for (int b = 1; b < bounceCount; b++) {
         prevIdx = bufIdx;
         bufIdx += globals.rayCount * 4;
 
@@ -693,13 +760,13 @@ void main() {
         if (reachedRatio <= 1.0) {
             ivec2 pixelCoords = ivec2(startPoint + diffToEnd * min(reachedRatio, 1.0));
             vec3 rayColor = okhsv_to_srgb(rayHue, 1.0, paths.data[prevIdx + 2]);
-            renderHead(pixelCoords, rayColor * 0.02);
+            renderHead(pixelCoords, rayColor * 0.5);
             return;
         }
         
         if (prevReachedRatio < 1.0) {
             vec3 rayColor = okhsv_to_srgb(rayHue, 1.0, paths.data[bufIdx + 2]);
-            float strength = paths.data[bufIdx + 3] > 0.5 ? 0.004 : 1.0;
+            float strength = paths.data[bufIdx + 3] > 0.5 ? surfaceMultiplier : 1.0;
             renderSplotch(ivec2(endPoint), rayColor * strength);
         }
 
